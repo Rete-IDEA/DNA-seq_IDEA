@@ -40,6 +40,7 @@ rule gatk_VariantRecalibrator:
         "../envs/gatk.yaml"
     benchmark:
         "benchmarks/gatk/VariantRecalibrator/{prefix}.{type}_recalibrate_info.txt"
+    threads: conservative_cpu_count(reserve_cores=2, max_cores=config.get("rules").get("gatk_VariantRecalibrator").get("threads"))
     shell:
         "gatk VariantRecalibrator --java-options {params.custom} "
         "-R {params.genome} "
@@ -69,6 +70,7 @@ rule gatk_ApplyVQSR:
         "logs/gatk/ApplyVQSR/{prefix}.{type}_recalibrate.log"
     benchmark:
         "benchmarks/gatk/ApplyVQSR/{prefix}.{type}_recalibrate.txt"
+    threads: conservative_cpu_count(reserve_cores=2, max_cores=config.get("rules").get("gatk_ApplyVQSR").get("threads"))
     shell:
         "gatk  ApplyVQSR --java-options {params.custom} "
         "-R {params.genome} "
@@ -76,3 +78,26 @@ rule gatk_ApplyVQSR:
         "--recal-file {input.recal} -ts-filter-level 99.0 "
         "--tranches-file {input.tranches} -O {output} "
         ">& {log}"
+
+
+rule snpSift_caseControl_all:
+    input:
+        "variant_calling/all.snp_recalibrated.indel_recalibrated.vcf.gz"        
+    output:
+        vcf='variant_calling/all.snp_recalibrated.indel_recalibrated.caseControls.vcf.gz',
+        index='variant_calling/all.snp_recalibrated.indel_recalibrated.caseControls.vcf.gz.tbi'
+    params:
+        ped=config.get("ped")
+    benchmark:
+        "benchmarks/gatk/SelectVariants/all.snp_recalibrated.indel_recalibrated.caseControls.txt"
+    conda:
+       "../envs/snpsift.yaml"
+    threads: config.get("rules").get("snpSift_caseControl_all").get("threads")
+    shell:
+        "SnpSift caseControl "
+        "-tfam {params.ped} "
+        "-name _ALL "
+        "{input} "
+        "| bgzip -c "
+        "> {output.vcf} && "
+        "tabix -p vcf {output.vcf}"

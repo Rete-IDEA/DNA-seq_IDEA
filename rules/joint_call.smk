@@ -9,7 +9,7 @@ rule gatk_GenomicsDBImport:
        "../envs/gatk.yaml"
     params:
         custom=java_params(tmp_dir=config.get("tmp_dir"), multiply_by=5),
-        intervals = resolve_single_filepath(*references_abs_path(),config.get("intervals").get(config.get("intervals_default")).get("bedTarget")),
+        intervals = resolve_single_filepath(*references_abs_path(),config.get("refseq_intervals")),
         genome=resolve_single_filepath(*references_abs_path(), config.get("genome_fasta")),
         gvcfs=_multi_flag_dbi("-V", expand("variant_calling/{sample.sample}.g.vcf.gz", sample=samples.reset_index().itertuples())),
         db=config.get("rules").get("gatk_GenomicsDBImport").get("db_suffix")
@@ -17,6 +17,7 @@ rule gatk_GenomicsDBImport:
         "logs/gatk/GenomicsDBImport/genomicsdbi.info.log"
     benchmark:
         "benchmarks/gatk/GenomicsDBImport/genomicsdbi.txt"
+    threads: conservative_cpu_count(reserve_cores=2, max_cores=config.get("rules").get("gatk_GenomicsDBImport").get("threads"))
     shell:
         "mkdir -p db; "
         "gatk GenomicsDBImport --java-options {params.custom} "
@@ -44,12 +45,13 @@ rule gatk_GenotypeGVCFs:
         "logs/gatk/GenotypeGVCFs/all.info.log"
     benchmark:
         "benchmarks/gatk/GenotypeGVCFs/all.txt"
+    threads: conservative_cpu_count(reserve_cores=2, max_cores=config.get("rules").get("gatk_GenotypeGVCFs").get("threads"))
     shell:
         "gatk GenotypeGVCFs --java-options {params.custom} "
         "-R {params.genome} "
         "-V gendb://{params.db} "
         "-G StandardAnnotation "
-        "--use-new-qual-calculator "
+        # "--use-new-qual-calculator "
         "-O {output} "
         "--dbsnp {params.dbsnp} "
         ">& {log} "

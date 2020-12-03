@@ -135,27 +135,11 @@ def get_odp(wildcards,samples,optical_dup='odp'):
     return "OPTICAL_DUPLICATE_PIXEL_DISTANCE={}".format(samples.loc[wildcards.sample, [optical_dup]].dropna()[0])
 
 
-
-def get_sample_by_set(wildcards, sets, label='sample'):
-    for sample_set in sets.loc[wildcards.set,[label]]:
-        sample_args=''
-        for x in sample_set.split(','):
-            sample_args= sample_args+' -sn '+x
-        return str(sample_args)
-
-def g2p_command(wildcards, ped, param):
-    """
-    Return the string for G2P VEP plugins
-    This plugin is executed for families
-    including ONLY ONE affected sample
-    """
-    if param is None:
-        return ''
-    affected_samples = ped.loc[(ped['affected'] == '2') & (ped['set'] == wildcards.set), 'sample'].tolist()
-    log_dir = 'log_dir=annotation/' + wildcards.set + '/vep/' + wildcards.set + '.g2p_log'
-    txt_report = 'txt_report=annotation/' + wildcards.set + '/vep/' + wildcards.set + '.g2p_report.txt'
-    html_report = 'html_report=annotation/' + wildcards.set + '/vep/' + wildcards.set + '.g2p_report.html'
-    if len(affected_samples) == 1:
-        return ["--individual " + ",".join(affected_samples) + ' ' + param + ',' + log_dir + ',' + txt_report + ',' + html_report]
-    return ''
+def get_kit(wildcards,samples,enrichment_kit='kit', specific_kit=None):
+    if specific_kit:
+        kit_name=specific_kit
+    else:   kit_name=samples.loc[wildcards.sample, [enrichment_kit]].dropna()[0]
+    hsprobes = resolve_single_filepath(*references_abs_path(), kits.loc[kit_name, ["hsProbes"]].dropna()[0])
+    hstarget = resolve_single_filepath(*references_abs_path(), kits.loc[kit_name, ["hsTarget"]].dropna()[0])
+    return hsprobes,hstarget
 
